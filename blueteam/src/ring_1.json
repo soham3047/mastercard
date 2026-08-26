@@ -1,0 +1,112 @@
+{
+  "nodes": [
+    {
+      "id": "r1_r000",
+      "type": "ring",
+      "created_at": "2026-02-28T00:00:00Z"
+    },
+    {
+      "id": "r1_r001",
+      "type": "ring",
+      "created_at": "2026-02-28T00:00:00Z"
+    },
+    {
+      "id": "r1_r002",
+      "type": "ring",
+      "created_at": "2026-02-28T00:00:00Z"
+    },
+    {
+      "id": "r1_r003",
+      "type": "ring",
+      "created_at": "2026-02-28T00:00:00Z"
+    },
+    {
+      "id": "r1_r004",
+      "type": "ring",
+      "created_at": "2026-02-28T00:00:00Z"
+    },
+    {
+      "id": "r1_r005",
+      "type": "ring",
+      "created_at": "2026-02-28T00:00:00Z"
+    },
+    {
+      "id": "r1_d0a",
+      "type": "decoy",
+      "created_at": "2026-02-28T00:00:00Z"
+    },
+    {
+      "id": "r1_d0b",
+      "type": "decoy",
+      "created_at": "2026-02-28T00:00:00Z"
+    },
+    {
+      "id": "r1_d1a",
+      "type": "decoy",
+      "created_at": "2026-02-28T00:00:00Z"
+    },
+    {
+      "id": "r1_d1b",
+      "type": "decoy",
+      "created_at": "2026-02-28T00:00:00Z"
+    }
+  ],
+  "edges": [
+    {
+      "from": "r1_r000",
+      "to": "r1_r001",
+      "timestamp": "2026-03-01T00:00:00Z",
+      "amount": 9850,
+      "label": "ring"
+    },
+    {
+      "from": "r1_r001",
+      "to": "r1_r002",
+      "timestamp": "2026-03-04T00:00:00Z",
+      "amount": 9700,
+      "label": "ring"
+    },
+    {
+      "from": "r1_r002",
+      "to": "r1_r003",
+      "timestamp": "2026-03-07T00:00:00Z",
+      "amount": 9550,
+      "label": "ring"
+    },
+    {
+      "from": "r1_r003",
+      "to": "r1_r004",
+      "timestamp": "2026-03-10T00:00:00Z",
+      "amount": 9400,
+      "label": "ring"
+    },
+    {
+      "from": "r1_r004",
+      "to": "r1_r005",
+      "timestamp": "2026-03-13T00:00:00Z",
+      "amount": 9250,
+      "label": "ring"
+    },
+    {
+      "from": "r1_r005",
+      "to": "r1_r000",
+      "timestamp": "2026-03-16T00:00:00Z",
+      "amount": 9100,
+      "label": "ring"
+    },
+    {
+      "from": "r1_d0a",
+      "to": "r1_d0b",
+      "timestamp": "2026-03-02T00:00:00Z",
+      "amount": 400,
+      "label": "decoy"
+    },
+    {
+      "from": "r1_d1a",
+      "to": "r1_d1b",
+      "timestamp": "2026-03-03T00:00:00Z",
+      "amount": 500,
+      "label": "decoy"
+    }
+  ]
+}
