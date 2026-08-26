@@ -1,0 +1,6 @@
+gudhi              # or ripser — persistent homology
+networkx
+scikit-learn       # classifier + naive baseline
+scipy              # significance testing (Mann-Whitney U, Kruskal-Wallis)
+persim             # persistence landscapes/images, bottleneck distance
+numpy

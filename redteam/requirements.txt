@@ -1,0 +1,5 @@
+numpy
+scipy
+networkx
+anthropic          # or openai — LLM client for identity/content generation
+python-dotenv

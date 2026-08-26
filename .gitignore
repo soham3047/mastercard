@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Data / outputs (per-track scratch artifacts)
+*.log
+/redteam/output/
+/blueteam/output/
+/adversarial/output/

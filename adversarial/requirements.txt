@@ -1,0 +1,4 @@
+numpy
+scipy
+scikit-optimize     # or gpytorch/botorch for GP + Bayesian optimization
+gudhi               # or ripser / persim — bottleneck distance (can also call blueteam's implementation)
