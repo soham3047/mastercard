@@ -1,0 +1,129 @@
+"""
+simulate.py — Stage C3 mocked 2-3 bank cross-bank verification.
+
+Builds a small set of simulated "banks," each holding a set of flagged
+fraud-ring fingerprints, with a KNOWN ground-truth overlap fraction baked
+in by construction — so `overlap_estimate`'s output can be sanity-checked
+against a known answer (see test_crossbank_smoke.py). Entirely
+self-contained: does NOT depend on A/B/C1/C2 being finished, per the
+master prompt's note that this stage can be built any time, even first.
+
+Optional real-data hook: `fingerprints_from_score_batch_result()` below
+lets a caller pass in B's real `score_batch(...)["detected_ring_nodes"]`
+as one bank's real flagged-account list instead of synthetic data, once
+available — swap it in via `real_fingerprints` without touching
+`simulate_cross_bank_verification`'s structure. Note that mixing one
+real bank against a synthetic one won't produce a meaningful overlap
+number (the synthetic shared-pool trick and B's real account IDs live in
+different namespaces) — that's expected, not a bug; overlap numbers are
+only meaningful bank-pair-to-bank-pair when both sides are synthetic or
+both sides are real.
+"""
+from __future__ import annotations
+import random
+from typing import Any, Dict, List, Optional
+
+from .commitment import commit_set, overlap_estimate
+
+# PUBLIC/SHARED by design for this simulation — NOT a real secret. See
+# commitment.py's docstring: this sharing is exactly the non-cryptographic
+# simplification the whole layer is labeled "simulated" for.
+DEFAULT_SHARED_SALT = "vineyard-demo-shared-salt-2026"
+
+
+def _make_synthetic_bank_fingerprints(
+    bank_name: str,
+    n_flagged: int,
+    shared_pool: List[str],
+    n_from_shared_pool: int,
+    rng: random.Random,
+) -> List[str]:
+    """One bank's flagged-fingerprint list: `n_from_shared_pool`
+    fingerprints drawn from a pool shared across banks (the KNOWN,
+    by-construction ground-truth overlap), plus fingerprints unique to
+    this bank filling the rest of `n_flagged`."""
+    shared_part = rng.sample(shared_pool, min(n_from_shared_pool, len(shared_pool)))
+    n_unique = max(0, n_flagged - len(shared_part))
+    unique_part = [f"{bank_name}_acct_{i:04d}" for i in range(n_unique)]
+    return shared_part + unique_part
+
+
+def fingerprints_from_score_batch_result(scored: Dict[str, Any]) -> List[str]:
+    """Optional real-data hook: pulls B's real `detected_ring_nodes` out
+    of a score_batch() result to use as one bank's real flagged-account
+    list, instead of synthetic data. Not wired in by default — pass the
+    result into `simulate_cross_bank_verification`'s `real_fingerprints`
+    dict when ready."""
+    return list(scored.get("detected_ring_nodes", []))
+
+
+def simulate_cross_bank_verification(
+    bank_names: Optional[List[str]] = None,
+    n_flagged_per_bank: int = 20,
+    known_overlap_fraction: float = 0.35,
+    shared_salt: str = DEFAULT_SHARED_SALT,
+    method: str = "jaccard",
+    seed: int = 42,
+    real_fingerprints: Optional[Dict[str, List[str]]] = None,
+) -> Dict[str, Any]:
+    """
+    Simulates `len(bank_names)` (default 3) banks proving fraud-ring
+    overlap via hash commitments, without sharing raw account data with
+    each other directly.
+
+    real_fingerprints: optional {bank_name: [fingerprint, ...]} to
+    override synthetic generation for specific banks (e.g. from
+    fingerprints_from_score_batch_result). Any bank not present in this
+    dict still gets synthetic data, so this keeps working end-to-end
+    with partial real data.
+
+    Returns exactly the root README's Cross-Bank Verification schema:
+        {"bank_pairs": [{"bank_a": ..., "bank_b": ..., "overlap_estimate": ...,
+                          "simulated": true}, ...]}
+    """
+    bank_names = bank_names or ["Bank1", "Bank2", "Bank3"]
+    real_fingerprints = real_fingerprints or {}
+    rng = random.Random(seed)
+
+    shared_pool_size = max(1, int(n_flagged_per_bank * known_overlap_fraction))
+    # Oversample the pool so each bank's draw is an actual random subset
+    # rather than the whole pool. If shared_pool == shared_pool_size, every
+    # bank's rng.sample(...) returns the identical full pool every time —
+    # that's what was producing bit-identical overlap_estimate across all
+    # bank pairs (0.2121, 0.2121, 0.2121). A 3x-oversampled pool keeps the
+    # *expected* pairwise overlap at ~known_overlap_fraction while letting
+    # individual pairs vary, like real independently-sampled bank data would.
+    shared_pool_capacity = max(shared_pool_size * 3, shared_pool_size + 1)
+    shared_pool = [f"shared_ring_acct_{i:04d}" for i in range(shared_pool_capacity)]
+
+    bank_fingerprints: Dict[str, List[str]] = {}
+    for name in bank_names:
+        if name in real_fingerprints:
+            bank_fingerprints[name] = real_fingerprints[name]
+        else:
+            bank_fingerprints[name] = _make_synthetic_bank_fingerprints(
+                name, n_flagged_per_bank, shared_pool, shared_pool_size, rng
+            )
+
+    bank_commitments = {
+        name: commit_set(fps, shared_salt) for name, fps in bank_fingerprints.items()
+    }
+
+    bank_pairs = []
+    for i in range(len(bank_names)):
+        for j in range(i + 1, len(bank_names)):
+            a, b = bank_names[i], bank_names[j]
+            est = overlap_estimate(bank_commitments[a], bank_commitments[b], method=method)
+            bank_pairs.append({
+                "bank_a": a,
+                "bank_b": b,
+                "overlap_estimate": est,
+                "simulated": True,
+            })
+
+    return {"bank_pairs": bank_pairs}
+
+
+if __name__ == "__main__":
+    import json
+    print(json.dumps(simulate_cross_bank_verification(), indent=2))
