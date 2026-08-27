@@ -572,3 +572,46 @@ fired rather than being told silently.
   `SCORE_BATCH_IS_REAL=False` when `BUILD_GRAPH_IS_REAL=False` too —
   not added here since it's a few-line, low-risk follow-up rather than
   something blocking this fix.
+
+## ADDENDUM 3 — Person C: redteam_adapter.py sys.path fix (real, confirmed root cause)
+
+After A committed real files to `redteam/` (sibling of `adversarial/` and
+`blueteam/` under the repo root, `redteam/src/__init__.py` present),
+`BUILD_GRAPH_IS_REAL` was still `False` under the documented invocation
+(`cd adversarial && python -m src.run_real_rounds`). This was NOT a
+problem with A's files.
+
+- Root cause, isolated and confirmed before touching anything: under
+  `python -m src.run_real_rounds` run from inside `adversarial/`,
+  Python puts only `adversarial/` on `sys.path` — never the repo root,
+  where `redteam/` actually lives. So `from redteam.src.theta import
+  ...` fails regardless of whether A's files are correct. Verified
+  directly with a minimal, structurally-valid dummy `redteam` package
+  before concluding this wasn't A's code at fault: the same import
+  failed against the dummy package too, in the same environment where
+  `blueteam_adapter.py`'s import of B's real module already succeeded.
+- Why blueteam_adapter.py didn't have this problem: it already computes
+  an absolute path from its own `__file__` and inserts it into
+  `sys.path` before importing (see its own docstring). `redteam_adapter.py`
+  never got the equivalent treatment — it did a bare `from redteam...
+  import`, hoping the path was already right. It never was, under the
+  documented invocation.
+- Fix: added the same kind of `__file__`-relative `sys.path` insertion
+  to `redteam_adapter.py`, computing the repo root
+  (`os.path.dirname(__file__)/../..`) and inserting it before the
+  import attempt. ~6 lines, contained entirely in this one file.
+- Verified for real, both directions:
+  - With a dummy-but-correct `redteam` package present:
+    `BUILD_GRAPH_IS_REAL` now prints `True` under the exact documented
+    command, and `run_real_rounds.py` runs end to end.
+  - With `redteam/` removed entirely: `BUILD_GRAPH_IS_REAL` still
+    correctly falls back to `False`, `test_c2_smoke.py` still passes
+    via the fallback path — the fix doesn't break the fallback
+    behavior added in Addendum 2.
+- Action for the real repo: apply this same fix to the actual
+  `redteam_adapter.py`, then rerun the `BUILD_GRAPH_IS_REAL` check —
+  it should now flip to `True` with A's real files in place, assuming
+  A's `Theta`/`build_graph`/`TransactionGraph.to_dict()` interfaces
+  match what the adapter expects (not yet independently verified against
+  A's actual `theta.py`/`main.py`/`schema.py`/`writer.py` — separate
+  from this fix).

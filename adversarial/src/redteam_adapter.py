@@ -13,10 +13,26 @@ import time, so run_real_rounds.py (and test_c2_smoke.py) can run end to
 end before A's real files exist. BUILD_GRAPH_IS_REAL tells you which
 path fired, same convention as blueteam_adapter's SCORE_BATCH_IS_REAL —
 check it before trusting output as A's real generator.
+
+SYS.PATH FIX (confirmed, not guessed): under the documented invocation
+(`cd adversarial && python -m src.run_real_rounds`), Python puts only
+`adversarial/` on sys.path — never the repo root, where `redteam/`
+actually lives as a sibling. So `import redteam...` failed even with
+A's real files present and correct; this was verified directly with a
+structurally-valid dummy redteam package before concluding it wasn't
+A's code at fault. blueteam_adapter.py already works around exactly
+this by computing an absolute path from its own __file__ and inserting
+it into sys.path; the same fix is applied below for redteam.
 """
 from __future__ import annotations
+import os
 import random
+import sys
 from typing import Any, Dict, List
+
+_repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if _repo_root not in sys.path:
+    sys.path.insert(0, _repo_root)
 
 BUILD_GRAPH_IS_REAL = False
 Theta = None
